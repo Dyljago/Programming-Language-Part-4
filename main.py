@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS function_table (
 conn.commit()
 
 cur.execute('''
-CREATE TABLE IF NOT EXISTS API_Function_Specific (
+CREATE TABLE IF NOT EXISTS Function_API_Specific (
     id SERIAL PRIMARY KEY,
     api_name_fk VARCHAR,
     function_name_fk VARCHAR,
@@ -47,8 +47,7 @@ CREATE TABLE IF NOT EXISTS API_Function_Specific (
     sim_expert_API TEXT,
     llm_expert_function TEXT,
     sim_expert_function TEXT,
-    CONSTRAINT unique_function_api_specific_pair UNIQUE (api_name_fk, function_name_fk),
-    FOREIGN KEY (api_name_fk, function_name_fk) REFERENCES function_table (api_name, function_name)
+    CONSTRAINT unique_api_function_specific_pair UNIQUE (api_name_fk, function_name_fk)
 )
 ''')
 
@@ -502,6 +501,32 @@ def ask_gpt_summary(input_messages):
     return response
 
 
+def ask_gpt_about_java_file(url):
+    def fetch_java_file(url):
+        """Fetches raw content of a Java file from GitHub."""
+        response = requests.get(url)
+        if response.status_code == 200:
+            return response.text
+        else:
+            raise Exception(f"Failed to retrieve the file: HTTP {response.status_code}")
+
+    """Fetches a Java file and asks GPT to analyze or summarize the file."""
+    try:
+        java_code = fetch_java_file(url)
+
+        # Construct the prompt for the GPT model to analyze or summarize the entire Java file
+        prompt = f"Analyze the following Java code:\n{java_code}\n---\nProvide a detailed summary or insight into the code's functionality and structure."
+
+        # OpenAI API call setup (make sure to configure API key properly)
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=prompt,
+            stream=True  # You can adjust max_tokens as necessary
+        )
+        return response.choices[0].message['content'] if response.choices else "No response."
+    except Exception as e:
+        return str(e)
+
 def extract_class_usages_from_file(file_path):
     imported_classes = set()
     variable_to_class = {}
@@ -515,13 +540,22 @@ def extract_class_usages_from_file(file_path):
         if line.strip().startswith('import '):
             full_class_path = line.strip()[7:].rstrip(';')
             all_imports.add(full_class_path)
-            if full_class_path.startswith('java.') or full_class_path.startswith(
-                    'javafx.') or full_class_path.startswith('javax.') or full_class_path.startswith("org."):
+            if ((full_class_path.startswith('java.') or full_class_path.startswith(
+                    'javafx.') or full_class_path.startswith('javax.') or full_class_path.startswith(
+                'org.apache.logging.log4j') or full_class_path.startswith('org.slf4j') or
+                 full_class_path.startswith('org.controlsfx') or full_class_path.startswith(
+                        'com.tobiasdiez.easybind')) or full_class_path.startswith('com.google.common') or
+                    full_class_path.startswith('org.fxmisc.richtext') or full_class_path.startswith('org.jabref')):
                 imported_classes.add(full_class_path)
                 package_name = '.'.join(full_class_path.split('.')[:-1])
                 package_names.add(package_name)
 
-    # Separate parsing of class instance creation from method invocation
+    # Map classes to methods
+    class_to_methods = {}
+    # Initialize methods set for each class in imported_classes
+    for cls in imported_classes:
+        class_to_methods[cls] = set()
+
     for line in lines:
         for full_class_path in imported_classes:
             class_name = full_class_path.split('.')[-1]
@@ -531,23 +565,23 @@ def extract_class_usages_from_file(file_path):
                 if len(parts) >= 2:
                     variable_name = parts[0].strip().split()[-1]
                     variable_to_class[variable_name] = full_class_path
-            # Check for method invocations for existing variables
-            for variable, assigned_class in variable_to_class.items():
-                if f'{variable}.' in line:
-                    method_start = line.find(f'{variable}.') + len(variable) + 1
-                    method_end = line.find('(', method_start)
-                    if method_end != -1:
-                        method_name = line[method_start:method_end].strip()
-                        if variable not in variable_to_methods:
-                            variable_to_methods[variable] = set()
-                        variable_to_methods[variable].add(method_name)
+            # Check for static method calls
+            if f'{class_name}.' in line:
+                method_start = line.find(f'{class_name}.') + len(class_name) + 1
+                method_end = line.find('(', method_start)
+                if method_end != -1:
+                    method_name = line[method_start:method_end].strip()
+                    class_to_methods[full_class_path].add(method_name)
 
-    # Map classes to methods
-    class_to_methods = {}
-    for variable, full_class_path in variable_to_class.items():
-        if full_class_path not in class_to_methods:
-            class_to_methods[full_class_path] = set()
-        class_to_methods[full_class_path].update(variable_to_methods.get(variable, set()))
+        # Check for method invocations for existing variables
+        for variable, assigned_class in variable_to_class.items():
+            if f'{variable}.' in line:
+                method_start = line.find(f'{variable}.') + len(variable) + 1
+                method_end = line.find('(', method_start)
+                if method_end != -1:
+                    method_name = line[method_start:method_end].strip()
+                    variable_to_methods.setdefault(variable, set()).add(method_name)
+                    class_to_methods[assigned_class].add(method_name)
 
     # Convert sets to lists for output consistency
     for class_path, methods in class_to_methods.items():
@@ -556,24 +590,154 @@ def extract_class_usages_from_file(file_path):
     return list(imported_classes), list(package_names), class_to_methods
 
 
-def find_module_for_package(package_name, modules_to_packages):
-    if package_name.startswith('javafx.'):
-        return None  # Return None for JavaFX packages
+def find_module_for_package(package_name):
+    modules_to_packages = [
+        ('java.base', ['java.io', 'java.lang', 'java.lang.annotation', 'java.lang.constant', 'java.lang.foreign',
+                       'java.lang.invoke', 'java.lang.module', 'java.lang.ref', 'java.lang.reflect',
+                       'java.lang.runtime', 'java.math',
+                       'java.net', 'java.net.spi', 'java.nio', 'java.nio.channels', 'java.nio.channels.spi',
+                       'java.nio.charset',
+                       'java.nio.charset.spi', 'java.nio.file', 'java.nio.file.attribute', 'java.nio.file.spi',
+                       'java.security',
+                       'java.security.cert', 'java.security.interfaces', 'java.security.spec', 'java.text',
+                       'java.text.spi', 'java.time',
+                       'java.time.chrono', 'java.time.format', 'java.time.temporal', 'java.time.zone', 'java.util',
+                       'java.util.concurrent', 'java.util.concurrent.atomic', 'java.util.concurrent.locks',
+                       'java.util.function',
+                       'java.util.jar', 'java.util.random', 'java.util.regex', 'java.util.spi', 'java.util.stream',
+                       'java.util.zip',
+                       'javax.crypto', 'javax.crypto.interfaces', 'javax.crypto.spec', 'javax.net', 'javax.net.ssl',
+                       'javax.security.auth', 'javax.security.auth.callback', 'javax.security.auth.login',
+                       'javax.security.auth.spi',
+                       'javax.security.auth.x500', 'javax.security.cert']),
+        ('java.compiler', ['javax.annotation.processing', 'javax.lang.model', 'javax.lang.model.element',
+                           'javax.lang.model.type', 'javax.lang.model.util', 'javax.tools']),
+        ('java.datatransfer', ['java.awt.datatransfer']),
+        ('java.desktop',
+         ['java.applet', 'java.awt', 'java.awt.color', 'java.awt.desktop', 'java.awt.dnd', 'java.awt.event',
+          'java.awt.font', 'java.awt.geom', 'java.awt.im', 'java.awt.im.spi', 'java.awt.image',
+          'java.awt.image.renderable',
+          'java.awt.print', 'java.beans', 'java.beans.beancontext', 'javax.accessibility', 'javax.imageio',
+          'javax.imageio.event', 'javax.imageio.metadata', 'javax.imageio.plugins.bmp', 'javax.imageio.plugins.jpeg',
+          'javax.imageio.plugins.tiff', 'javax.imageio.spi', 'javax.imageio.stream', 'javax.print',
+          'javax.print.attribute',
+          'javax.print.attribute.standard', 'javax.print.event', 'javax.sound.midi', 'javax.sound.midi.spi',
+          'javax.sound.sampled', 'javax.sound.sampled.spi', 'javax.swing', 'javax.swing.border',
+          'javax.swing.colorchooser',
+          'javax.swing.event', 'javax.swing.filechooser', 'javax.swing.plaf', 'javax.swing.plaf.basic',
+          'javax.swing.plaf.metal', 'javax.swing.plaf.multi', 'javax.swing.plaf.nimbus', 'javax.swing.plaf.synth',
+          'javax.swing.table', 'javax.swing.text', 'javax.swing.text.html', 'javax.swing.text.html.parser',
+          'javax.swing.text.rtf', 'javax.swing.tree', 'javax.swing.undo']),
+        ('java.instrument', ['java.lang.instrument']),
+        ('java.logging', ['java.util.logging']),
+        ('java.management', ['java.lang.management', 'javax.management', 'javax.management.loading',
+                             'javax.management.modelmbean', 'javax.management.monitor', 'javax.management.openmbean',
+                             'javax.management.relation', 'javax.management.remote', 'javax.management.timer']),
+        ('java.management.rmi', ['javax.management.remote.rmi']),
+        ('java.naming', ['javax.naming', 'javax.naming.directory', 'javax.naming.event', 'javax.naming.ldap',
+                         'javax.naming.ldap.spi', 'javax.naming.spi']),
+        ('java.net.http', ['java.net.http']),
+        ('java.prefs', ['java.util.prefs']),
+        ('java.rmi', ['java.rmi', 'java.rmi.dgc', 'java.rmi.registry', 'java.rmi.server', 'javax.rmi.ssl']),
+        ('java.scripting', ['javax.script']),
+        ('java.se', []),
+        ('java.security.jgss', ['javax.security.auth.kerberos', 'org.ietf.jgss']),
+        ('java.security.sasl', ['javax.security.sasl']),
+        ('java.smartcardio', ['javax.smartcardio']),
+        ('java.sql', ['java.sql', 'javax.sql']),
+        ('java.sql.rowset', ['javax.sql.rowset', 'javax.sql.rowset.serial', 'javax.sql.rowset.spi']),
+        ('java.transaction.xa', ['javax.transaction.xa']),
+        (
+            'java.xml',
+            ['javax.xml', 'javax.xml.catalog', 'javax.xml.datatype', 'javax.xml.namespace', 'javax.xml.parsers',
+             'javax.xml.stream', 'javax.xml.stream.events', 'javax.xml.stream.util', 'javax.xml.transform',
+             'javax.xml.transform.dom', 'javax.xml.transform.sax', 'javax.xml.transform.stax',
+             'javax.xml.transform.stream',
+             'javax.xml.validation', 'javax.xml.xpath', 'org.w3c.dom', 'org.w3c.dom.bootstrap',
+             'org.w3c.dom.events',
+             'org.w3c.dom.ls', 'org.w3c.dom.ranges', 'org.w3c.dom.traversal', 'org.w3c.dom.views',
+             'org.xml.sax',
+             'org.xml.sax.ext', 'org.xml.sax.helpers']),
+        ('java.xml.crypto', ['javax.xml.crypto', 'javax.xml.crypto.dom', 'javax.xml.crypto.dsig',
+                             'javax.xml.crypto.dsig.dom', 'javax.xml.crypto.dsig.keyinfo',
+                             'javax.xml.crypto.dsig.spec']),
+        ('jdk.accessibility', ['com.sun.java.accessibility.util']),
+        ('jdk.attach', ['com.sun.tools.attach', 'com.sun.tools.attach.spi']),
+        ('jdk.charsets', []),
+        ('jdk.compiler',
+         ['com.sun.source.doctree', 'com.sun.source.tree', 'com.sun.source.util', 'com.sun.tools.javac']),
+        ('jdk.crypto.cryptoki', []),
+        ('jdk.crypto.ec', []),
+        ('jdk.dynalink', ['jdk.dynalink', 'jdk.dynalink.beans', 'jdk.dynalink.linker', 'jdk.dynalink.linker.support',
+                          'jdk.dynalink.support']),
+        ('jdk.editpad', []),
+        ('jdk.hotspot.agent', []),
+        ('jdk.httpserver', ['com.sun.net.httpserver', 'com.sun.net.httpserver.spi']),
+        ('jdk.incubator.vector', ['jdk.incubator.vector']),
+        ('jdk.jartool', ['jdk.security.jarsigner']),
+        ('jdk.javadoc', ['jdk.javadoc.doclet']),
+        ('jdk.jcmd', []),
+        ('jdk.jconsole', ['com.sun.tools.jconsole']),
+        ('jdk.jdeps', []),
+        ('jdk.jdi', ['com.sun.jdi', 'com.sun.jdi.connect', 'com.sun.jdi.connect.spi', 'com.sun.jdi.event',
+                     'com.sun.jdi.request']),
+        ('jdk.jdwp.agent', []),
+        ('jdk.jfr', ['jdk.jfr', 'jdk.jfr.consumer']),
+        ('jdk.jlink', []),
+        ('jdk.jpackage', []),
+        ('jdk.jshell', ['jdk.jshell', 'jdk.jshell.execution', 'jdk.jshell.spi', 'jdk.jshell.tool']),
+        ('jdk.jsobject', ['netscape.javascript']),
+        ('jdk.jstatd', []),
+        ('jdk.localedata', []),
+        ('jdk.management', ['com.sun.management']),
+        ('jdk.management.agent', []),
+        ('jdk.management.jfr', ['jdk.management.jfr']),
+        ('jdk.naming.dns', []),
+        ('jdk.naming.rmi', []),
+        ('jdk.net', ['jdk.net', 'jdk.nio']),
+        ('jdk.nio.mapmode', ['jdk.nio.mapmode']),
+        ('jdk.sctp', ['com.sun.nio.sctp']),
+        ('jdk.security.auth', ['com.sun.security.auth', 'com.sun.security.auth.callback', 'com.sun.security.auth.login',
+                               'com.sun.security.auth.module']),
+        ('jdk.security.jgss', ['com.sun.security.jgss']),
+        ('jdk.xml.dom', ['org.w3c.dom.css', 'org.w3c.dom.html', 'org.w3c.dom.stylesheets', 'org.w3c.dom.xpath']),
+        ('jdk.zipfs', [])
+    ]
+    # Loop through the modules to find which one includes this package
     for module, packages in modules_to_packages:
         if package_name in packages:
             return module
-    return "Package not found in any module"
+    return None
 
 
 # https://docs.oracle.com/en/java/javase/22/docs/api/java.base/java/io/BufferedInputStream.html
 def fetch_method_descriptions(module_name, full_class_name, methods):
     use_new_html_structure = module_name is not None  # False if JavaFX (None), true otherwise
+    use_log4j_html_structure = full_class_name.startswith('org.apache.logging.log4j')
+    use_slf4j_html_structure = full_class_name.startswith('org.slf4j')
+    use_controlsfx_html_structure = full_class_name.startswith('org.controlsfx')
+    use_tobiasdiez_html_structure = full_class_name.startswith('com.tobiasdiez.easybind')
+    use_google_html_structure = full_class_name.startswith('com.google.common')
+    use_richtext_html_structure = full_class_name.startswith('org.fxmisc.richtext')
 
     def construct_base_url(module, package_name):
-        if module is None:  # Indicates a JavaFX class
-            return f"https://docs.oracle.com/javafx/2/api/{package_name}/"
-        else:
-            return f"https://docs.oracle.com/en/java/javase/22/docs/api/{module}/{package_name}/"
+        # Determine if the class is from Log4J or a regular Java package
+        if 'org.apache.logging.log4j' in package_name:
+            return f"https://logging.apache.org/log4j/2.x/javadoc/log4j-api/{package_name.replace('.', '/')}/"
+        elif 'org.slf4j' in package_name:
+            return f"https://www.slf4j.org/api/{package_name.replace('.', '/')}/"
+        elif 'org.controlsfx' in package_name:
+            return f"https://javadoc.io/static/org.controlsfx/controlsfx/8.40.14/{package_name.replace('.', '/')}/"
+        elif 'com.tobiasdiez.easybind' in package_name:
+            return f"https://github.com/tobiasdiez/EasyBind/blob/main/src/main/java/com/tobiasdiez/easybind/"
+        elif 'com.google.common' in package_name:
+            return f"https://guava.dev/releases/19.0/api/docs/{package_name.replace('.', '/')}/"
+        elif 'org.fxmisc.richtext' in package_name:
+            return f"http://fxmisc.github.io/richtext/javadoc/0.8.1/{package_name.replace('.', '/')}/"
+        elif module is None:  # For JavaFX classes
+            return f"https://docs.oracle.com/javafx/2/api/{package_name.replace('.', '/')}/"
+        else:  # Default to Java SE documentation
+            return f"https://docs.oracle.com/en/java/javase/22/docs/api/{module}/{package_name.replace('.', '/')}/"
 
     # Split the full class name into its package and class name parts
     parts = full_class_name.split('.')
@@ -590,7 +754,9 @@ def fetch_method_descriptions(module_name, full_class_name, methods):
     response = requests.get(class_url)
     # print(f"Response status: {response.status_code}")
 
-    # Parse the HTML content of the page
+    # Fetch the content of the class documentation page
+    response = requests.get(class_url)
+    print(f"Response status: {response.status_code}")
     soup = BeautifulSoup(response.text, 'html.parser')
     method_descriptions = {}
 
@@ -611,6 +777,89 @@ def fetch_method_descriptions(module_name, full_class_name, methods):
                                 full_description = ' '.join(d.text.strip() for d in description_tags)
                                 descriptions.append(full_description)
                                 # print(f"DEBUG: Added description for {method}.")  # Debug statement
+        elif use_log4j_html_structure:
+            for method_tag in soup.find_all('code'):
+                if method in method_tag.text:
+                    print(f"DEBUG: Found method tag for {method}.")  # Debug statement
+                    parent_div = method_tag.find_parent('div')
+                    if parent_div:
+                        next_div = parent_div.find_next_sibling('div')
+                        if next_div:
+                            description_tags = next_div.find_all('div', class_='block')
+                            if description_tags:
+                                full_description = ' '.join(d.text.strip() for d in description_tags)
+                                descriptions.append(full_description)
+                                # print(f"DEBUG: Added description for {method}.")  # Debug statement
+        elif use_slf4j_html_structure:
+            for method_tag in soup.find_all('code'):
+                if method in method_tag.text:
+                    parent_div = method_tag.find_parent('div')
+                    if parent_div:
+                        next_div = parent_div.find_next_sibling('div')
+                        if next_div:
+                            description_tags = next_div.find_all('div', class_='block')
+                            if description_tags:
+                                full_description = ' '.join(d.text.strip() for d in description_tags)
+                                descriptions.append(full_description)
+                                # print(f"DEBUG: Added description for {method}.")  # Debug statement
+        elif use_controlsfx_html_structure:
+            for method_tag in soup.find_all('code'):
+                # Navigate to the parent 'td' of this 'a' tag
+                parent_td = method_tag.find_parent('td', class_='colLast')
+                if parent_td:
+                    # Find the 'div' with class "block" within this 'td'
+                    description_tag = parent_td.find('div', class_='block')
+                    if description_tag:
+                        full_description = description_tag.get_text(strip=True)
+                        descriptions.append(full_description)
+        elif use_google_html_structure:
+            # Iterate over all `h4` tags which might contain method names
+            for method_tag in soup.find_all('h4'):
+                # Check if the method name is in the current `h4` text
+                if method in method_tag.text:
+                    # Find the next 'pre' sibling (assumes 'pre' is immediately after 'h4')
+                    pre_tag = method_tag.find_next_sibling('pre')
+                    if pre_tag:
+                        # Find the next sibling 'div' of 'pre' with class 'block' that contains the description
+                        method_description_div = pre_tag.find_next_sibling('div', class_='block')
+                        if method_description_div:
+                            # Extract the text and strip whitespace
+                            full_description = ' '.join(method_description_div.text.strip().split())
+                            descriptions.append(full_description)
+                            # Debug output
+                            print(f"DEBUG: Added description for {method}.")  # Debug statement
+                        else:
+                            print("DEBUG: No description div found.")
+                    else:
+                        print("DEBUG: No 'pre' tag found next to 'h4'.")
+        elif use_tobiasdiez_html_structure:
+            descriptions = ask_gpt_about_java_file(class_url)
+        elif use_richtext_html_structure:
+            for method in methods:
+                found = False
+                for code_tag in soup.find_all('code'):
+                    if method in code_tag.text:
+                        # Try to find the description for this method
+                        next_div = code_tag.parent.find_next_sibling('div', class_='block')
+                        if next_div:
+                            method_descriptions[method] = next_div.text.strip()
+                            found = True
+                            break
+                if not found:
+                    for method_tag in soup.find_all('code'):
+                        inherited_methods = {}
+                        # Find the section containing inherited methods
+                        for h3 in soup.find_all('h3'):
+                            if 'Methods inherited from class' in h3.text:
+                                inherited_package = h3.text.replace('Methods inherited from class', '').strip()
+                                package_name = ".".join(inherited_package.rsplit('.')[:-1])
+                                class_name = inherited_package.split('.')[-1]
+                                # Now, look for the specific method within the inherited class content
+                                description = fetch_method_descriptions(find_module_for_package(package_name))
+                                if description:
+                                    inherited_methods[method_tag] = description
+                                break
+                        return inherited_methods
         else:  # Old HTML structure, typically used for JavaFX
             for method_tag in soup.find_all('code'):
                 if method in method_tag.text:
@@ -651,6 +900,7 @@ def fetch_method_descriptions(module_name, full_class_name, methods):
             # Find the dictionary where the 'name' key matches the name to find
             gpt_label_dict = next((item for item in api_gpt if item["name"] == full_class_name), None)
             gpt_sim_dict = next((item for item in api_sim if item["name"] == full_class_name), None)
+            print(full_class_name)
             gpt_label = gpt_label_dict["other"]
             gpt_sim = gpt_sim_dict["other"]
 
@@ -663,7 +913,10 @@ def fetch_method_descriptions(module_name, full_class_name, methods):
             # Convert the extracted text to lowercase and replace spaces with underscores
             formatted_label = gpt_sim.lower().replace(" ", "_")
             variable_name = formatted_label + "_options"
-            sim_options_list = globals()[variable_name]
+            try:
+                sim_options_list = globals()[variable_name]
+            except KeyError:
+                sim_options_list = globals()['utility_options']
 
             # Find the index of "Label:" and "Reason:"
             label_index = gpt_label.find("Label:")
@@ -675,7 +928,10 @@ def fetch_method_descriptions(module_name, full_class_name, methods):
             # Convert the extracted text to lowercase and replace spaces with underscores
             formatted_label = label_text.lower().replace(" ", "_")
             variable_name = formatted_label + "_options"
-            options_list = globals()[variable_name]
+            try:
+                options_list = globals()[variable_name]
+            except KeyError:
+                options_list = globals()['utility_options']
 
             givenOptions = ""
             similarity_results = []
@@ -926,6 +1182,7 @@ def fetch_import_description(full_import_name):
         print(answer + '\n')
         api_gpt.append({"name": full_import_name, "other": answer})
         program_output_file.write(answer + '\n')
+
     else:
         # Split the full class name into its package and class name parts
         parts = full_import_name.split('.')
@@ -1072,6 +1329,113 @@ def fetch_import_description(full_import_name):
                 print(f'Could not retrieve description for {full_import_name}\n')
                 program_output_file.write(f'Could not retrieve description for {full_import_name}\n')
         else:
+            prompt = f'Please summarize the following class concisely and accurately. Method: {full_import_name}. End of Description.'
+            messages_description_summ.append({"role": "user", "content": prompt})
+            test = ask_gpt_summary(messages_description_summ)
+            answer = ""
+            for chunk in test:
+                if chunk.choices[0].delta.content:
+                    answer += (chunk.choices[0].delta.content.strip('*') or "")
+            package_description_gpt = answer.strip('#### ')
+            package_description = package_description_gpt
+            program_output_file.write(answer.strip('#### '))
+            messages_description_summ.pop()
+            api_context.append({"name": full_import_name, "other": package_description})
+            api_topic.append({"name": full_import_name, "other": package_description})
+
+            options = {
+                "Application": "Software components designed by third parties or as plugins to enhance specific functionalities within a system.",
+                "Application Performance Manager": "Tools or systems dedicated to monitoring, analyzing, and optimizing the performance of various software applications.",
+                "Big Data": "APIs tailored for handling and managing vast amounts of data, encompassing diverse formats and structures.",
+                "Cloud": "Software tools and services delivered over the Internet, facilitating remote access, scalability, and flexibility.",
+                "Computer Graphics": "Technologies focused on creating, editing, and rendering visual content, encompassing various media formats.",
+                "Data Structure": "Patterns and frameworks governing the organization, storage, and manipulation of data, including collections, lists, and trees.",
+                "Databases": "Systems and tools for storing, managing, and retrieving structured data and associated metadata.",
+                "Software Development and IT": "Libraries and frameworks catering to version control, continuous integration, and deployment processes.",
+                "Error Handling": "Strategies and mechanisms designed to detect, respond to, and recover from errors or exceptional conditions within software systems.",
+                "Event Handling": "Mechanisms and components responsible for detecting, processing, and responding to events triggered within software applications.",
+                "Geographic Information System": "Technologies dealing with the storage, analysis, and visualization of spatially referenced data and geographic information.",
+                "Input/Output": "Functionalities and interfaces facilitating the reading from and writing to various data sources and destinations.",
+                "Interpreter": "Features and functionalities associated with interpreting and executing code or scripts within a software environment.",
+                "Internationalization": "Tools and frameworks enabling the adaptation of software applications to diverse linguistic, cultural, and regional contexts.",
+                "Logic": "Frameworks and patterns governing the organization and execution flow of software applications, including control structures and architectural paradigms.",
+                "Language": "Features and capabilities inherent to programming languages, including syntax, semantics, and data type conversions.",
+                "Logging": "Mechanisms for recording and storing activity and status information generated by software applications for monitoring, debugging, and analysis purposes.",
+                "Machine Learning": "Tools and libraries supporting the development, training, and deployment of machine learning models based on data analysis and pattern recognition.",
+                "Microservices/Services": "Decomposed and independently deployable software components facilitating modular and scalable application architectures and inter-application communication.",
+                "Multimedia": "Technologies enabling the representation and manipulation of information across various media formats, including text, audio, and video.",
+                "Multithread": "Support for concurrent execution and management of multiple threads within a software application or system.",
+                "Natural Language Processing": "Technologies and algorithms enabling the processing, understanding, and generation of human language data within computational systems.",
+                "Network": "Protocols, APIs, and tools facilitating communication and data exchange between networked devices and systems.",
+                "Operating System": "Interfaces and functionalities providing access to and management of a computer's hardware and software resources, including system-level APIs.",
+                "Parser": "Components and algorithms responsible for analyzing and interpreting data or code structures, often breaking them down into identifiable components for further processing.",
+                "Search": "APIs and tools facilitating the retrieval and manipulation of information from various data sources, particularly for web-based searching and indexing.",
+                "Security": "Technologies, protocols, and practices aimed at safeguarding data, systems, and communications from unauthorized access, breaches, and malicious activities.",
+                "Setup": "Configurations, settings, and initialization processes necessary for setting up and configuring software applications or systems.",
+                "User Interface": "Components and frameworks defining the visual and interactive elements of software applications, including forms, screens, and graphical controls.",
+                "Utility": "Third party libraries for general-purpose functions and utilities.",
+                "Test": "Frameworks and tools facilitating the automation, execution, and management of software testing processes and procedures."
+            }
+            givenOptions = ""
+            similarity_results = []
+            for option, descriptions in options.items():
+                givenOptions += (option + ": " + descriptions)
+                class_desc = nlp(package_description)
+                given_desc = nlp(option + ": " + descriptions)
+                similarity_results.append(class_desc.similarity(given_desc))
+            greatest_value = 0
+            greatest_value_index = 0
+            for i in range(len(similarity_results)):
+                if similarity_results[i] > greatest_value:
+                    greatest_value = similarity_results[i]
+                    greatest_value_index = i
+            # print(greatest_value_index)
+            print("\nSimilarity Score: " + str(similarity_results[greatest_value_index].__round__(4)))
+            program_output_file.write(
+                f"\nSimilarity Score: {str(similarity_results[greatest_value_index].__round__(4))}\n")
+            print(
+                list(options.keys())[greatest_value_index] + ": " + list(options.values())[greatest_value_index] + '\n')
+            api_sim.append({"name": full_import_name,
+                            "other": list(options.keys())[greatest_value_index] + ": " + list(options.values())[
+                                greatest_value_index]})
+            program_output_file.write(
+                list(options.keys())[greatest_value_index] + ": " + list(options.values())[greatest_value_index] + '\n')
+            answer = ""
+            if not check_package_in_file(full_import_name):
+                response = ask_gpt(package_description, givenOptions)
+                for chunk in response:
+                    if chunk.choices[0].delta.content:
+                        answer += (chunk.choices[0].delta.content.strip('*') or "")
+                answer = answer.strip('#### ')
+                words = answer.split()
+                answer = ''
+                counter = 0
+                for i, word in enumerate(words):
+                    if word == "Reason:":
+                        answer += '\n'
+                        counter -= i
+                    answer += word
+                    counter += 1
+                    if (counter + 1) % 17 == 0:  # Add newline every x words
+                        answer += '\n'
+                    else:
+                        answer += ' '
+                save_data_to_text_file(full_import_name, answer)
+            else:
+                start = False
+                with open(file_path, 'r') as file:
+                    for line in file:
+                        if not start:
+                            words = line.split()
+                            if full_import_name in words:
+                                start = True
+                        elif not 'END' in line:
+                            answer += line
+                        else:
+                            start = False
+            print(answer + '\n')
+            api_gpt.append({"name": full_import_name, "other": answer})
+            program_output_file.write(answer + '\n')
             print(f'Could not retrieve documentation for {full_import_name}\n')
             program_output_file.write(f'Could not retrieve documentation for {full_import_name}\n')
 
@@ -1303,7 +1667,7 @@ def main():
         program_output_file.write("\n" + full_class_name)
         simple_class_name = full_class_name.split('.')[-1]  # Extract simple class name for display
         package_name = '.'.join(full_class_name.split('.')[:-1])  # Extract the package name
-        module_name = find_module_for_package(package_name, Java_modules_to_packages)
+        module_name = find_module_for_package(package_name)
         descriptions = fetch_method_descriptions(module_name, full_class_name, methods)
 
         if methods:
@@ -1341,6 +1705,7 @@ def main():
                 # Find the dictionary where the 'name' key matches the name to find
                 gpt_label_dict = next((item for item in api_gpt if item["name"] == full_class_name), None)
                 gpt_sim_dict = next((item for item in api_sim if item["name"] == full_class_name), None)
+                print(full_class_name)
                 gpt_label = gpt_label_dict["other"]
                 gpt_sim = gpt_sim_dict["other"]
 
@@ -1353,7 +1718,10 @@ def main():
                 # Convert the extracted text to lowercase and replace spaces with underscores
                 formatted_label = gpt_sim.lower().replace(" ", "_")
                 variable_name = formatted_label + "_options"
-                sim_options_list = globals()[variable_name]
+                try:
+                    sim_options_list = globals()[variable_name]
+                except KeyError:
+                    sim_options_list = globals()['utility_options']
 
                 # Find the index of "Label:" and "Reason:"
                 label_index = gpt_label.find("Label:")
@@ -1367,7 +1735,10 @@ def main():
                 # Convert the extracted text to lowercase and replace spaces with underscores
                 formatted_label = label_text.lower().replace(" ", "_")
                 variable_name = formatted_label + "_options"
-                options_list = globals()[variable_name]
+                try:
+                    options_list = globals()[variable_name]
+                except KeyError:
+                    options_list = globals()['utility_options']
 
                 givenOptions = ""
                 similarity_results = []
@@ -1439,6 +1810,7 @@ def main():
                 # Find the dictionary where the 'name' key matches the name to find
                 gpt_label_dict = next((item for item in api_gpt if item["name"] == full_class_name), None)
                 gpt_sim_dict = next((item for item in api_sim if item["name"] == full_class_name), None)
+                print(full_class_name)
                 gpt_label = gpt_label_dict["other"]
                 gpt_sim = gpt_sim_dict["other"]
 
@@ -1451,7 +1823,10 @@ def main():
                 # Convert the extracted text to lowercase and replace spaces with underscores
                 formatted_label = gpt_sim.lower().replace(" ", "_")
                 variable_name = formatted_label + "_options"
-                sim_options_list = globals()[variable_name]
+                try:
+                    sim_options_list = globals()[variable_name]
+                except KeyError:
+                    sim_options_list = globals()['utility_options']
 
                 # Find the index of "Label:" and "Reason:"
                 label_index = gpt_label.find("Label:")
@@ -1465,7 +1840,10 @@ def main():
                 # Convert the extracted text to lowercase and replace spaces with underscores
                 formatted_label = label_text.lower().replace(" ", "_")
                 variable_name = formatted_label + "_options"
-                options_list = globals()[variable_name]
+                try:
+                    options_list = globals()[variable_name]
+                except KeyError:
+                    options_list = globals()['utility_options']
 
                 givenOptions = ""
                 similarity_results = []
@@ -1527,17 +1905,35 @@ def main():
         function_topic_info = function_topic[i]['other']
         function_gpt_info = function_gpt[i]['other']
         function_sim_info = function_sim[i]['other']
-        cur.execute("""
-            INSERT INTO API_Function_Specific (
-                function_name_fk, api_name_fk, api_context, api_topic, llm_expert_API, 
-                sim_expert_API, function_context, function_topic, llm_expert_function, 
-                sim_expert_function
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            ON CONFLICT (function_name_fk, api_name_fk) DO NOTHING;
-            """, (function_name_fk, api_name_fk, api_context_info, api_topic_info, api_gpt_info,
-                  api_sim_info, function_context_info, function_topic_info, function_gpt_info,
-                  function_sim_info))
-        conn.commit()
+        try:
+            # Set autocommit to False before starting the transaction
+            conn.autocommit = False
+
+            # Begin a new transaction
+            cur.execute("BEGIN")
+
+            # Execute SQL command
+            cur.execute("""
+                INSERT INTO Function_API_Specific (
+                    function_name_fk, api_name_fk, api_context, api_topic, llm_expert_API, 
+                    sim_expert_API, function_context, function_topic, llm_expert_function, 
+                    sim_expert_function
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (function_name_fk, api_name_fk) DO NOTHING;
+                """, (function_name_fk, api_name_fk, api_context_info, api_topic_info, api_gpt_info,
+                      api_sim_info, function_context_info, function_topic_info, function_gpt_info,
+                      function_sim_info))
+
+            # Commit the transaction
+            conn.commit()
+        except psycopg2.errors.ForeignKeyViolation as e:
+            print(e)
+        except psycopg2.Error as e:
+            print(f"Database error: {e}")
+        finally:
+            # Reset connection autocommit to True
+            conn.autocommit = True
+
     print(api_context)
     print(api_topic)
     print(api_gpt)
