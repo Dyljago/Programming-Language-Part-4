@@ -1,0 +1,14 @@
+Found reserved words:['package', 'import', 'import', 'import', 'import', 'public', 'class', 'private', 'char', 'private', 'int', 'char', 'int', 'this', 'this', 'public', 'char', 'return', 'this', 'public', 'int', 'return', 'this', 'public', 'void', 'char', 'this', 'public', 'void', 'int', 'this', 'public', 'switch', 'this', 'case', 'break', 'case', 'break', 'case', 'break', 'case', 'break', 'default', 'this', 'return', 'public', 'boolean', 'boolean', 'if', 'return', 'public', 'new', 'new', 'add', 'new', 'int', 'int', 'char', 'switch', 'case', 'break', 'case', 'break', 'case', 'break', 'case', 'new', 'return']
+Found variables:['exercise8', 'javax', 'sql', 'RowSet', 'java', 'util', 'Random', 'ArrayList', 'net', 'SetUp', 'suit', 'value', 'getSuit', 'getValue', 'setSuit', 'setValue', 'Override', 'String', 'toString', 'valueOf', 'isMatch', 'match', 'matchCheck', 'false', 'random', 'randomCard', 'true', 'r', 'x', 'rs', 'execute', 'counter', 'nextInt', 'System', 'out', 'print']
+Found node types:['CompilationUnitContext', 'PackageDeclarationContext', 'TERMINAL', 'QualifiedNameContext', 'ImportDeclarationContext', 'TypeDeclarationContext', 'ClassOrInterfaceModifierContext', 'ClassDeclarationContext', 'ClassBodyContext', 'ClassBodyDeclarationContext', 'ModifierContext', 'MemberDeclarationContext', 'FieldDeclarationContext', 'TypeSpecContext', 'PrimitiveTypeContext', 'VariableDeclaratorsContext', 'VariableDeclaratorContext', 'VariableDeclaratorIdContext', 'ConstructorDeclarationContext', 'FormalParametersContext', 'FormalParameterListContext', 'FormalParameterContext', 'ConstructorBodyContext', 'BlockContext', 'BlockStatementContext', 'StatementContext', 'StatementExpressionContext', 'ExpressionContext', 'PrimaryContext', 'MethodDeclarationContext', 'MethodBodyContext', 'AnnotationContext', 'AnnotationNameContext', 'ClassOrInterfaceTypeContext', 'LocalVariableDeclarationStatementContext', 'LocalVariableDeclarationContext', 'VariableInitializerContext', 'LiteralContext', 'ParExpressionContext', 'SwitchBlockStatementGroupContext', 'SwitchLabelContext', 'ConstantExpressionContext', 'ExpressionListContext', 'CreatorContext', 'CreatedNameContext', 'ClassCreatorRestContext', 'ArgumentsContext']
+
+Imported classes:['javax.sql.RowSet', 'java.util.Random', 'java.util.ArrayList', 'javax.net']
+Package names:['javax', 'java.util', 'javax.sql']
+
+Classes to Methods mapping:{'RowSet': ['execute'], 'Random': ['nextInt'], 'ArrayList': ['add'], 'net': []}
+javax.sql.RowSetClass: RowSet, Method: execute, Description: Fills this RowSet object with data.
+java.util.RandomClass: Random, Method : nextInt,  
+
+java.util.ArrayListClass: ArrayList, Method : add,  
+
+javax.net

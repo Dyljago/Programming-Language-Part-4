@@ -1,0 +1,123 @@
+Found reserved words:['package', 'import', 'import', 'import', 'import', 'import', 'import', 'import', 'import', 'import', 'import', 'import', 'import', 'import', 'import', 'import', 'import', 'import', 'identifier', 'import', 'import', 'import', 'import', 'import', 'import', 'import', 'import', 'import', 'import', 'import', 'public', 'class', 'implements', 'private', 'static', 'final', 'private', 'static', 'final', 'new', 'public', 'return', 'public', 'throws', 'new', 'return', 'public', 'throws', 'new', 'new', 'return', 'public', 'identifier', 'throws', 'new', 'identifier', 'return', 'public', 'return', 'if', 'return', 'if', 'return', 'if', 'return', 'new', 'for', 'int', 'add', 'return', 'public', 'void', 'if', 'new', 'new', 'private', 'throws', 'try', 'new', 'return', 'catch', 'throw', 'new', 'private', 'if', 'return', 'return', 'new', 'private', 'return', 'public', 'throws', 'final', 'final', 'new', 'for', 'if', 'return', 'if', 'return', 'return', 'public', 'return']
+Found variables:['org', 'jabref', 'logic', 'importer', 'fetcher', 'kong', 'unirest', 'json', 'JSONArray', 'JSONException', 'JSONObject', 'apache', 'http', 'client', 'utils', 'URIBuilder', 'lucene', 'queryparser', 'flexible', 'core', 'nodes', 'QueryNode', 'cleanup', 'FieldFormatterCleanup', 'formatter', 'bibtexfields', 'ClearFormatter', 'RemoveBracesFormatter', 'transformers', 'DefaultQueryTransformer', 'util', 'JsonReader', 'strings', 'StringSimilarity', 'model', 'entry', 'Author', 'AuthorList', 'BibEntry', 'field', 'StandardField', 'DOI', 'types', 'EntryType', 'StandardEntryType', 'OptionalUtil', 'java', 'net', 'MalformedURLException', 'URISyntaxException', 'URL', 'ArrayList', 'Collections', 'List', 'Optional', 'stream', 'IntStream', 'CrossRef', 'IdParserFetcher', 'EntryBasedParserFetcher', 'SearchBasedParserFetcher', 'IdBasedParserFetcher', 'String', 'API_URL', 'REMOVE_BRACES_FORMATTER', 'Override', 'getName', 'getURLForEntry', 'FetcherException', 'uriBuilder', 'getLatexFreeField', 'TITLE', 'ifPresent', 'title', 'addParameter', 'AUTHOR', 'author', 'YEAR', 'year', 'build', 'toURL', 'getURLForQuery', 'luceneQuery', 'transformLuceneQuery', 'orElse', 'getUrlForIdentifier', 'Parser', 'getParser', 'inputStream', 'response', 'toJsonObject', 'isEmpty', 'emptyList', 'getJSONObject', 'has', 'jsonItemToBibEntry', 'singletonList', 'items', 'getJSONArray', 'entries', 'length', 'i', 'item', 'doPostCleanup', 'getField', 'equals', 'SUBTITLE', 'ParseException', 'setType', 'convertType', 'getString', 'setField', 'ofNullable', 'optJSONArray', 'map', 'array', 'optString', 'toAuthors', 'optJSONObject', 'optInt', 'Integer', 'toString', 'PAGES', 'VOLUME', 'ISSN', 'exception', 'authors', 'null', 'range', 'mapToObj', 'collect', 'getAsFirstLastNamesWithAnd', 'type', 'Article', 'Misc', 'extractIdentifier', 'inputEntry', 'fetchedEntries', 'entryTitle', 'format', 'stringSimilarity', 'fetchedEntry', 'dataTitle', 'isPresentAnd', 'isSimilar', 'getDOI', 'dataSubtitle', 'dataWithSubTitle', 'combine', 'subtitle', 'titleWithSubtitle', 'empty', 'getIdentifierName']
+Found node types:['CompilationUnitContext', 'PackageDeclarationContext', 'TERMINAL', 'QualifiedNameContext', 'ImportDeclarationContext', 'TypeDeclarationContext', 'ClassOrInterfaceModifierContext', 'ClassDeclarationContext', 'TypeListContext', 'TypeSpecContext', 'ClassOrInterfaceTypeContext', 'TypeArgumentsContext', 'TypeArgumentContext', 'ClassBodyContext', 'ClassBodyDeclarationContext', 'ModifierContext', 'MemberDeclarationContext', 'FieldDeclarationContext', 'VariableDeclaratorsContext', 'VariableDeclaratorContext', 'VariableDeclaratorIdContext', 'VariableInitializerContext', 'ExpressionContext', 'PrimaryContext', 'LiteralContext', 'CreatorContext', 'CreatedNameContext', 'ClassCreatorRestContext', 'ArgumentsContext', 'AnnotationContext', 'AnnotationNameContext', 'MethodDeclarationContext', 'FormalParametersContext', 'MethodBodyContext', 'BlockContext', 'BlockStatementContext', 'StatementContext', 'FormalParameterListContext', 'FormalParameterContext', 'QualifiedNameListContext', 'LocalVariableDeclarationStatementContext', 'LocalVariableDeclarationContext', 'ExpressionListContext', 'StatementExpressionContext', 'ParExpressionContext', 'TypeArgumentsOrDiamondContext', 'ForControlContext', 'ForInitContext', 'PrimitiveTypeContext', 'ForUpdateContext', 'CatchClauseContext', 'CatchTypeContext', 'VariableModifierContext', 'EnhancedForControlContext', 'NonWildcardTypeArgumentsContext', 'ExplicitGenericInvocationSuffixContext']
+
+Imported classes:['org.jabref.logic.util.strings.StringSimilarity', 'org.jabref.model.entry.identifier.DOI', 'org.jabref.model.util.OptionalUtil', 'java.util.ArrayList', 'java.net.MalformedURLException', 'java.net.URL', 'java.util.stream.IntStream', 'org.jabref.logic.importer.*', 'java.util.List', 'java.util.Optional', 'org.jabref.model.entry.Author', 'org.jabref.logic.importer.fetcher.transformers.DefaultQueryTransformer', 'org.jabref.logic.formatter.bibtexfields.ClearFormatter', 'org.jabref.logic.formatter.bibtexfields.RemoveBracesFormatter', 'org.jabref.model.entry.field.StandardField', 'org.jabref.logic.cleanup.FieldFormatterCleanup', 'org.jabref.logic.importer.util.JsonReader', 'org.jabref.model.entry.types.EntryType', 'java.util.Collections', 'org.jabref.model.entry.AuthorList', 'org.jabref.model.entry.BibEntry', 'java.net.URISyntaxException', 'org.jabref.model.entry.types.StandardEntryType']
+Package names:['org.jabref.model.entry.identifier', 'java.util.stream', 'org.jabref.logic.importer.util', 'org.jabref.logic.util.strings', 'java.util', 'org.jabref.model.util', 'java.net', 'org.jabref.model.entry.types', 'org.jabref.logic.importer', 'org.jabref.logic.cleanup', 'org.jabref.model.entry.field', 'org.jabref.logic.importer.fetcher.transformers', 'org.jabref.model.entry', 'org.jabref.logic.formatter.bibtexfields']
+
+
+Similarity Score: 0.9565
+User Interface: Components and frameworks defining the visual and interactive elements of software applications, including forms, screens, and graphical controls.
+流量异常,请尝试更换网络环境 
+
+Similarity Score: 0.712
+Internationalization: Tools and frameworks enabling the adaptation of software applications to diverse linguistic, cultural, and regional contexts.
+流量异常,请尝试更换网络环境 
+
+
+Similarity Score: 0.9012
+Internationalization: Tools and frameworks enabling the adaptation of software applications to diverse linguistic, cultural, and regional contexts.
+Label: Utility 
+Reason: The description provided about OptionalUtil aligns with the Utility label as it mentions a utility
+class that enhances Java's Optional class by offering methods for common operations, such as mapping, filtering, and
+handling null values more effectively. This utility class serves general-purpose functions and utilities within software development, making
+it fitting for the Utility category. 
+
+
+
+Description for java.util.ArrayList:
+Documentation URL: https://docs.oracle.com/javase/8/docs/api/java/util/ArrayList.html
+Description: The ArrayList class in Java provides a resizable-array implementation of the List interface, permitting all elements, including null. It offers methods for manipulating the size of the internal array used to store elements, with operations such as add running in amortized constant time. While the class is unsynchronized, methods like ensureCapacity can be used to optimize performance when adding elements. However, in concurrent environments, external synchronization is required for structural modifications to prevent ConcurrentModificationException. Iterators provided by ArrayList are fail-fast, detecting concurrent modifications and throwing exceptions to ensure program correctness. This class is part of the Java Collections Framework and has been available since version 1.2.
+Similarity Score: 0.9361
+Event Handling: Mechanisms and components responsible for detecting, processing, and responding to events triggered within software applications.
+Label: Data Structure 
+Reason: The description outlines the characteristics, behavior, and usage of the `ArrayList<E>` class in Java, including
+its implementation details, methods, and relationship with other data structures and interfaces such as `List<E>`, `RandomAccess`, `Cloneable`,
+and `Serializable`. It clearly falls under the category of data structures, as it discusses the organization, storage,
+and manipulation of data within the context of Java Collections Framework, making "Data Structure" the most fitting
+label based on the content. 
+
+
+
+Description for java.net.MalformedURLException:
+Documentation URL: https://docs.oracle.com/javase/8/docs/api/java/net/MalformedURLException.html
+Description: The MalformedURLException class in Java, extending IOException, is thrown to signify the occurrence of a malformed URL. This happens when either no legal protocol is found in a given specification string or when the string cannot be parsed. Introduced in JDK1.0, it is serializable and is a fundamental part of handling URL-related exceptions in Java.
+Similarity Score: 0.8668
+Multithread: Support for concurrent execution and management of multiple threads within a software application or system.
+Label: Browser Usage 
+Reason: The user has a Microsoft Edge browser window open, which indicates they are using the
+browser, possibly for browsing, research, or work-related tasks. This classification is based on the metadata provided that
+specifies the user's current activity within the Edge browser. 
+
+
+
+Description for java.net.URL:
+Documentation URL: https://docs.oracle.com/javase/8/docs/api/java/net/URL.html
+The URL class in Java represents a Uniform Resource Locator, providing a pointer to resources on the World Wide Web. URLs consist of various parts like protocol, host machine name, path, port, and optional fragment. It does not handle encoding or decoding of URL components, requiring callers to manage this responsibility. The URI class is recommended for handling encoding and decoding, with URLEncoder and URLDecoder classes available for HTML form encoding purposes.
+Similarity Score: 0.9269
+Event Handling: Mechanisms and components responsible for detecting, processing, and responding to events triggered within software applications.
+流量异常,请尝试更换网络环境 
+
+
+
+Description for java.util.stream.IntStream:
+Documentation URL: https://docs.oracle.com/javase/8/docs/api/java/util/stream/IntStream.html
+This is an interface in Java that extends BaseStream and represents a sequence of primitive int values for sequential and parallel aggregate operations, specifically for int values. It is the int primitive specialization of Stream and provides examples of aggregate operations like summing weights of red widgets. It also highlights specifications for streams and parallelism in the java.util.stream package documentation. The IntStream interface has been available since Java 1.8 and is related to Stream and java.util.stream.
+Similarity Score: 0.9179
+Logic: Frameworks and patterns governing the organization and execution flow of software applications, including control structures and architectural paradigms.
+你好！有什么问题我可以帮助你解答呢？ 
+This class involves methods related to importing in JabRef.
+Similarity Score: 0.8799
+Error Handling: Strategies and mechanisms designed to detect, respond to, and recover from errors or exceptional conditions within software systems.
+你好，请问有什么可以帮助您的吗？ 
+Could not retrieve documentation for org.jabref.logic.importer.*
+
+
+Description for java.util.List:
+Documentation URL: https://docs.oracle.com/javase/8/docs/api/java/util/List.html
+The List interface in Java represents an ordered collection where elements can be precisely inserted and accessed by index. Unlike sets, lists typically allow duplicates and null elements, and the interface imposes additional stipulations on iterator, add, remove, equals, and hashCode methods. It provides positional access methods, a ListIterator for bidirectional access, and search methods. Caution is advised when inserting or removing elements, especially with some implementations performing costly linear searches. Certain list implementations may have restrictions on element types, and adding ineligible elements may result in unchecked exceptions.
+Similarity Score: 0.9363
+Parser: Components and algorithms responsible for analyzing and interpreting data or code structures, often breaking them down into identifiable components for further processing.
+Label: Software Development and IT 
+Reason: The description of the Java class `DataFlavor` and its functionality aligns with the category of
+Software Development and IT, as it involves the handling and manipulation of data within software applications, specifically
+related to data transfer and content type encapsulation. This falls within the domain of libraries and frameworks
+catering to version control, continuous integration, and deployment processes, which are fundamental aspects of software development and
+IT. The provided information about the class's usage in accessing data on the clipboard, drag and drop
+operations, and determining the type of object returned by `Transferable.getTransferData` corresponds to the core functionalities associated with
+software development and IT [[1]](https://www.student.unsw.edu.au/paraphrasing-summarising-and-quoting). 
+
+
+
+Description for java.util.Optional:
+Documentation URL: https://docs.oracle.com/javase/8/docs/api/java/util/Optional.html
+Description: The Optional class in Java is a container object that may or may not hold a non-null value. It provides methods like isPresent() to check if a value exists and get() to retrieve it. Other methods, such as orElse() and ifPresent(), offer functionality based on the presence or absence of a value. Introduced in Java 8, it is a value-based class, and caution is advised against using identity-sensitive operations like reference equality or synchronization on Optional instances.
+Similarity Score: 0.9134
+Interpreter: Features and functionalities associated with interpreting and executing code or scripts within a software environment.
+Label: Utility 
+Reason: The provided description is about the "Optional" class in Java, which provides utility methods for
+working with objects. It includes methods for checking if a value is present, retrieving the value, returning
+a default value if the value is not present, and executing code if the value is present.
+These utility methods make it easier to handle null values and perform operations on objects in a
+null-safe manner. 
+
+
+Similarity Score: 0.8603
+Internationalization: Tools and frameworks enabling the adaptation of software applications to diverse linguistic, cultural, and regional contexts.
+流量异常,请尝试更换网络环境 
+
+Description: The JSONObject class in the Kong Unirest library represents a JSON object, providing methods to manipulate and access JSON data. It offers functionalities for creating, parsing, and modifying JSON objects, arrays, and values. This class serves as a fundamental component for handling JSON data within the Unirest library, enabling developers to interact with JSON data easily.
+Similarity Score: 0.9309
+Language: Features and capabilities inherent to programming languages, including syntax, semantics, and data type conversions.
+流量异常,请尝试更换网络环境 
+Could not retrieve documentation for kong.unirest.json.JSONObject
+
+Similarity Score: 0.9542
+User Interface: Components and frameworks defining the visual and interactive elements of software applications, including forms, screens, and graphical controls.
+您好！有什么问题我可以帮助您解决呢？ 
+
+Similarity Score: 0.7174
+Internationalization: Tools and frameworks enabling the adaptation of software applications to diverse linguistic, cultural, and regional contexts.
+流量异常,请尝试更换网络环境 
+描述：org.apache.lucene.queryparser.flexible.core.nodes.QueryNode类。
+Similarity Score: 0.5041
